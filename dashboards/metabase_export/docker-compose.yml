@@ -1,0 +1,40 @@
+# Metabase for NorthPeak — self-serve BI over the DuckDB warehouse.
+#
+# DuckDB is not a built-in Metabase driver, so we mount the community driver jar
+# into /plugins (see README.md for the one-line download). In production you'd
+# instead point Metabase at the warehouse in BigQuery/Snowflake, which are native.
+#
+#   docker compose up -d      # then open http://localhost:3000
+#
+services:
+  metabase:
+    build: .
+    image: northpeak-metabase-duckdb:v0.50.8
+    container_name: northpeak-metabase
+    ports:
+      - "3000:3000"
+    volumes:
+      # community DuckDB driver (download into ./plugins first — see README)
+      - ./plugins:/plugins
+      # The warehouse, mounted READ-ONLY so BI can never mutate governed data.
+      # NOTE: this points at warehouse/metabase_compat/northpeak.duckdb, not the
+      # main warehouse/northpeak.duckdb — see "DuckDB storage-format gotcha"
+      # in README.md for why a separate file is required.
+      - ../../warehouse/metabase_compat/northpeak.duckdb:/data/northpeak.duckdb:ro
+      # Metabase's own app metadata (users, questions, dashboards, permissions)
+      # persisted on a named volume so it survives container rebuild/recreate.
+      - metabase-data:/metabase.db
+    environment:
+      MB_PLUGINS_DIR: /plugins
+      # Metabase app database (its own metadata) kept in a local H2 volume for demo;
+      # use Postgres for anything real (see README).
+      MB_DB_TYPE: h2
+      MB_DB_FILE: /metabase.db/metabase.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  metabase-data:

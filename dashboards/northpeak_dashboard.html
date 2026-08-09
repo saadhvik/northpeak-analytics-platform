@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NorthPeak — Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --pine:#1f4d3a; --pine2:#2e6f52; --sky:#3d7ea6; --sun:#e8a33d;
+    --ink:#1c2530; --muted:#6b7785; --line:#e5e9ee; --bg:#f6f8f9; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink)}
+  header{background:linear-gradient(135deg,var(--pine),var(--pine2));color:#fff;padding:28px 32px}
+  header h1{margin:0;font-size:22px;letter-spacing:.2px}
+  header p{margin:6px 0 0;color:#cfe3d8;font-size:13px}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px 32px 56px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:8px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .kpi .value{font-size:26px;font-weight:650;margin-top:6px}
+  .kpi .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .panel h3{margin:0 0 4px;font-size:14px}
+  .panel .hint{font-size:12px;color:var(--muted);margin:0 0 12px}
+  .toolbar{display:flex;align-items:center;gap:10px;margin-top:18px}
+  select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px}
+  canvas{max-height:300px}
+  .foot{margin-top:26px;font-size:12px;color:var(--muted);line-height:1.6}
+  @media(max-width:860px){.grid,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>NorthPeak — Analytics Dashboard</h1>
+  <p id="subtitle"></p>
+</header>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+
+  <div class="toolbar">
+    <label for="yearSel" style="font-size:13px;color:var(--muted)">Revenue trend — year:</label>
+    <select id="yearSel"></select>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h3>Monthly revenue</h3>
+      <p class="hint">Net revenue vs finance-recognized revenue. Gap = unshipped "Processing" orders.</p>
+      <canvas id="trend"></canvas>
+    </div>
+    <div class="panel">
+      <h3>Orders by status</h3>
+      <p class="hint">Order lifecycle distribution.</p>
+      <canvas id="status"></canvas>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="panel"><h3>Net revenue by category</h3><p class="hint">Top categories.</p><canvas id="category"></canvas></div>
+    <div class="panel"><h3>Top brands</h3><p class="hint">By net revenue.</p><canvas id="brands"></canvas></div>
+    <div class="panel"><h3>Revenue by traffic source</h3><p class="hint">Customer acquisition channel.</p><canvas id="traffic"></canvas></div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const D = {"kpis": {"net_revenue": 8127336.718602154, "gmv": 10827118.91175019, "recognized_revenue": 5972005.20630512, "refunds": 1097306.7412574291, "net_orders": 106617, "aov": 76.22927599352968, "purchasers": 72123, "repeat_rate": 0.3371739944261886, "refund_rate": 0.11895383773175469, "net_margin_rate": 0.5189125594076275, "date_min": "2019-01-06", "date_max": "2024-01-17"}, "monthly": [{"month": "2019-01", "net_revenue": 1507.0, "recognized_revenue": 1091.0, "net_orders": 17}, {"month": "2019-02", "net_revenue": 3598.0, "recognized_revenue": 2935.0, "net_orders": 37}, {"month": "2019-03", "net_revenue": 5862.0, "recognized_revenue": 2485.0, "net_orders": 73}, {"month": "2019-04", "net_revenue": 7963.0, "recognized_revenue": 5661.0, "net_orders": 84}, {"month": "2019-05", "net_revenue": 10210.0, "recognized_revenue": 7828.0, "net_orders": 146}, {"month": "2019-06", "net_revenue": 12248.0, "recognized_revenue": 9645.0, "net_orders": 167}, {"month": "2019-07", "net_revenue": 14417.0, "recognized_revenue": 9066.0, "net_orders": 198}, {"month": "2019-08", "net_revenue": 16006.0, "recognized_revenue": 12551.0, "net_orders": 203}, {"month": "2019-09", "net_revenue": 22857.0, "recognized_revenue": 17559.0, "net_orders": 280}, {"month": "2019-10", "net_revenue": 22155.0, "recognized_revenue": 16862.0, "net_orders": 295}, {"month": "2019-11", "net_revenue": 19790.0, "recognized_revenue": 16000.0, "net_orders": 285}, {"month": "2019-12", "net_revenue": 29873.0, "recognized_revenue": 20894.0, "net_orders": 396}, {"month": "2020-01", "net_revenue": 33608.0, "recognized_revenue": 24074.0, "net_orders": 412}, {"month": "2020-02", "net_revenue": 33353.0, "recognized_revenue": 24213.0, "net_orders": 406}, {"month": "2020-03", "net_revenue": 33591.0, "recognized_revenue": 27135.0, "net_orders": 456}, {"month": "2020-04", "net_revenue": 38561.0, "recognized_revenue": 28676.0, "net_orders": 497}, {"month": "2020-05", "net_revenue": 42359.0, "recognized_revenue": 31602.0, "net_orders": 548}, {"month": "2020-06", "net_revenue": 47262.0, "recognized_revenue": 34870.0, "net_orders": 612}, {"month": "2020-07", "net_revenue": 50625.0, "recognized_revenue": 37477.0, "net_orders": 685}, {"month": "2020-08", "net_revenue": 48285.0, "recognized_revenue": 36806.0, "net_orders": 629}, {"month": "2020-09", "net_revenue": 50801.0, "recognized_revenue": 37901.0, "net_orders": 706}, {"month": "2020-10", "net_revenue": 55582.0, "recognized_revenue": 39243.0, "net_orders": 770}, {"month": "2020-11", "net_revenue": 62075.0, "recognized_revenue": 44054.0, "net_orders": 803}, {"month": "2020-12", "net_revenue": 66882.0, "recognized_revenue": 46107.0, "net_orders": 858}, {"month": "2021-01", "net_revenue": 79206.0, "recognized_revenue": 58884.0, "net_orders": 1021}, {"month": "2021-02", "net_revenue": 65093.0, "recognized_revenue": 47868.0, "net_orders": 865}, {"month": "2021-03", "net_revenue": 76712.0, "recognized_revenue": 54228.0, "net_orders": 991}, {"month": "2021-04", "net_revenue": 75461.0, "recognized_revenue": 57557.0, "net_orders": 1032}, {"month": "2021-05", "net_revenue": 88222.0, "recognized_revenue": 63992.0, "net_orders": 1134}, {"month": "2021-06", "net_revenue": 84848.0, "recognized_revenue": 61101.0, "net_orders": 1133}, {"month": "2021-07", "net_revenue": 84351.0, "recognized_revenue": 58096.0, "net_orders": 1148}, {"month": "2021-08", "net_revenue": 97982.0, "recognized_revenue": 73190.0, "net_orders": 1269}, {"month": "2021-09", "net_revenue": 104086.0, "recognized_revenue": 74530.0, "net_orders": 1275}, {"month": "2021-10", "net_revenue": 107074.0, "recognized_revenue": 80570.0, "net_orders": 1376}, {"month": "2021-11", "net_revenue": 110628.0, "recognized_revenue": 82001.0, "net_orders": 1444}, {"month": "2021-12", "net_revenue": 116832.0, "recognized_revenue": 86660.0, "net_orders": 1532}, {"month": "2022-01", "net_revenue": 121015.0, "recognized_revenue": 91553.0, "net_orders": 1602}, {"month": "2022-02", "net_revenue": 107584.0, "recognized_revenue": 78908.0, "net_orders": 1424}, {"month": "2022-03", "net_revenue": 129504.0, "recognized_revenue": 93281.0, "net_orders": 1802}, {"month": "2022-04", "net_revenue": 133595.0, "recognized_revenue": 95771.0, "net_orders": 1741}, {"month": "2022-05", "net_revenue": 148758.0, "recognized_revenue": 111364.0, "net_orders": 1941}, {"month": "2022-06", "net_revenue": 146998.0, "recognized_revenue": 110283.0, "net_orders": 1936}, {"month": "2022-07", "net_revenue": 162377.0, "recognized_revenue": 121754.0, "net_orders": 2187}, {"month": "2022-08", "net_revenue": 164979.0, "recognized_revenue": 117876.0, "net_orders": 2322}, {"month": "2022-09", "net_revenue": 163937.0, "recognized_revenue": 118778.0, "net_orders": 2176}, {"month": "2022-10", "net_revenue": 195760.0, "recognized_revenue": 145276.0, "net_orders": 2485}, {"month": "2022-11", "net_revenue": 193368.0, "recognized_revenue": 141221.0, "net_orders": 2537}, {"month": "2022-12", "net_revenue": 204836.0, "recognized_revenue": 151883.0, "net_orders": 2669}, {"month": "2023-01", "net_revenue": 214035.0, "recognized_revenue": 155687.0, "net_orders": 2866}, {"month": "2023-02", "net_revenue": 207280.0, "recognized_revenue": 158149.0, "net_orders": 2700}, {"month": "2023-03", "net_revenue": 241337.0, "recognized_revenue": 180669.0, "net_orders": 3163}, {"month": "2023-04", "net_revenue": 235020.0, "recognized_revenue": 174022.0, "net_orders": 3213}, {"month": "2023-05", "net_revenue": 260244.0, "recognized_revenue": 190804.0, "net_orders": 3451}, {"month": "2023-06", "net_revenue": 271332.0, "recognized_revenue": 203549.0, "net_orders": 3646}, {"month": "2023-07", "net_revenue": 319953.0, "recognized_revenue": 231948.0, "net_orders": 4069}, {"month": "2023-08", "net_revenue": 330352.0, "recognized_revenue": 244383.0, "net_orders": 4214}, {"month": "2023-09", "net_revenue": 361234.0, "recognized_revenue": 265176.0, "net_orders": 4642}, {"month": "2023-10", "net_revenue": 412129.0, "recognized_revenue": 297163.0, "net_orders": 5210}, {"month": "2023-11", "net_revenue": 433337.0, "recognized_revenue": 317685.0, "net_orders": 5906}, {"month": "2023-12", "net_revenue": 549328.0, "recognized_revenue": 399765.0, "net_orders": 7162}, {"month": "2024-01", "net_revenue": 599079.0, "recognized_revenue": 441643.0, "net_orders": 7770}], "by_category": [{"category": "Outerwear & Coats", "net_revenue": 983392.0}, {"category": "Jeans", "net_revenue": 941801.0}, {"category": "Sweaters", "net_revenue": 637020.0}, {"category": "Suits & Sport Coats", "net_revenue": 497930.0}, {"category": "Fashion Hoodies & Sweatshirts", "net_revenue": 488461.0}, {"category": "Swim", "net_revenue": 483074.0}, {"category": "Sleep & Lounge", "net_revenue": 408091.0}, {"category": "Shorts", "net_revenue": 378403.0}, {"category": "Tops & Tees", "net_revenue": 369302.0}, {"category": "Dresses", "net_revenue": 349629.0}, {"category": "Active", "net_revenue": 348564.0}, {"category": "Intimates", "net_revenue": 345908.0}], "by_department": [{"department": "Men", "net_revenue": 4296253.0}, {"department": "Women", "net_revenue": 3831084.0}], "by_traffic": [{"traffic_source": "Search", "net_revenue": 5696900.0}, {"traffic_source": "Organic", "net_revenue": 1222981.0}, {"traffic_source": "Facebook", "net_revenue": 471674.0}, {"traffic_source": "Email", "net_revenue": 404478.0}, {"traffic_source": "Display", "net_revenue": 331302.0}], "top_brands": [{"brand": "Calvin Klein", "net_revenue": 154953.0}, {"brand": "Diesel", "net_revenue": 153820.0}, {"brand": "7 For All Mankind", "net_revenue": 140861.0}, {"brand": "Carhartt", "net_revenue": 140738.0}, {"brand": "True Religion", "net_revenue": 134266.0}, {"brand": "Tommy Hilfiger", "net_revenue": 96611.0}, {"brand": "The North Face", "net_revenue": 83944.0}, {"brand": "Volcom", "net_revenue": 78579.0}, {"brand": "Quiksilver", "net_revenue": 76961.0}, {"brand": "Columbia", "net_revenue": 76707.0}], "by_status": [{"status": "Shipped", "orders": 37577}, {"status": "Complete", "orders": 31354}, {"status": "Processing", "orders": 25156}, {"status": "Cancelled", "orders": 18609}, {"status": "Returned", "orders": 12530}]};
+const fmtUSD = n => "$" + Math.round(n).toLocaleString();
+const fmtUSDk = n => "$" + (n/1e6).toFixed(2) + "M";
+const fmtPct = n => (n*100).toFixed(1) + "%";
+const PINE="#1f4d3a", PINE2="#2e6f52", SKY="#3d7ea6", SUN="#e8a33d", GREY="#c3ccd4";
+
+// KPI cards
+const k = D.kpis;
+const cards = [
+  ["Net revenue", fmtUSDk(k.net_revenue), "governed headline"],
+  ["Recognized (finance)", fmtUSDk(k.recognized_revenue), "shipped/complete only"],
+  ["GMV (demand)", fmtUSDk(k.gmv), "all items ordered"],
+  ["Net orders", k.net_orders.toLocaleString(), "excl. cancelled"],
+  ["AOV", fmtUSD(k.aov), "net rev / net orders"],
+  ["Purchasing customers", k.purchasers.toLocaleString(), fmtPct(k.repeat_rate)+" repeat"],
+  ["Refund rate", fmtPct(k.refund_rate), "returns / gross"],
+  ["Net margin", fmtPct(k.net_margin_rate), "of net revenue"],
+];
+document.getElementById("kpis").innerHTML = cards.map(c =>
+  `<div class="kpi"><div class="label">${c[0]}</div><div class="value">${c[1]}</div><div class="sub">${c[2]}</div></div>`
+).join("");
+document.getElementById("subtitle").textContent =
+  `Self-serve KPIs from the governed marts · ${k.date_min} → ${k.date_max}`;
+document.getElementById("foot").innerHTML =
+  "Generated from <code>fct_daily_kpis</code>, <code>dim_products</code>, <code>dim_customers</code>, <code>fct_orders</code>. "+
+  "Every metric resolves to <code>docs/metric_definitions.md</code>. Regenerate after each daily refresh.";
+
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+// Year filter for trend
+const years = [...new Set(D.monthly.map(m => m.month.slice(0,4)))];
+const sel = document.getElementById("yearSel");
+sel.innerHTML = `<option value="ALL">All years</option>` + years.map(y=>`<option value="${y}">${y}</option>`).join("");
+
+let trendChart;
+function drawTrend(year){
+  const rows = year==="ALL" ? D.monthly : D.monthly.filter(m=>m.month.startsWith(year));
+  const labels = rows.map(r=>r.month);
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(document.getElementById("trend"), {
+    type:"line",
+    data:{labels, datasets:[
+      {label:"Net revenue", data:rows.map(r=>r.net_revenue), borderColor:PINE, backgroundColor:"rgba(31,77,58,.08)", fill:true, tension:.3},
+      {label:"Recognized", data:rows.map(r=>r.recognized_revenue), borderColor:SUN, backgroundColor:"transparent", borderDash:[5,4], tension:.3},
+    ]},
+    options:{responsive:true, plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+": "+fmtUSD(c.parsed.y)}}},
+      scales:{y:{ticks:{callback:v=>"$"+(v/1000)+"k"}}}}
+  });
+}
+drawTrend("ALL");
+sel.addEventListener("change", e=>drawTrend(e.target.value));
+
+// Orders by status (doughnut)
+new Chart(document.getElementById("status"), {
+  type:"doughnut",
+  data:{labels:D.by_status.map(r=>r.status),
+    datasets:[{data:D.by_status.map(r=>r.orders),
+      backgroundColor:[PINE,PINE2,SKY,SUN,GREY]}]},
+  options:{plugins:{legend:{position:"bottom"}}}
+});
+
+function bar(id, rows, labelKey, valKey, color, horizontal){
+  new Chart(document.getElementById(id), {
+    type:"bar",
+    data:{labels:rows.map(r=>r[labelKey]),
+      datasets:[{data:rows.map(r=>r[valKey]), backgroundColor:color}]},
+    options:{indexAxis:horizontal?"y":"x", plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>fmtUSD(c.parsed[horizontal?"x":"y"])}}},
+      scales:{[horizontal?"x":"y"]:{ticks:{callback:v=>"$"+(v/1000)+"k"}}}}
+  });
+}
+bar("category", D.by_category, "category", "net_revenue", PINE2, true);
+bar("brands", D.top_brands, "brand", "net_revenue", SKY, true);
+bar("traffic", D.by_traffic, "traffic_source", "net_revenue", SUN, false);
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+version: 2
+
+# Tests here run on the TRANSFORMED output, so they catch bugs the source tests
+# can't: a bad cast that silently produces NULLs, or a timezone conversion that
+# drops rows. Referential/uniqueness guarantees are asserted at the source layer
+# (_sources.yml); these assert the staging contract.
+
+models:
+  - name: stg_distribution_centers
+    description: One row per fulfilment center (typed, trimmed).
+    columns:
+      - name: distribution_center_id
+        data_tests: [unique, not_null]
+
+  - name: stg_products
+    description: One row per product. Adds unit_margin (retail_price - cost).
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+      - name: retail_price
+        data_tests: [not_null]
+
+  - name: stg_users
+    description: One row per customer. Email lowercased; created_at in UTC.
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+      - name: created_at
+        description: Account creation, UTC.
+        data_tests: [not_null]
+
+  - name: stg_orders
+    description: One row per order. Timestamps normalized to UTC; lifecycle nulls preserved.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: user_id
+        data_tests: [not_null]
+      - name: created_at
+        description: Order placed, UTC. Must never be null.
+        data_tests: [not_null]
+      - name: status
+        data_tests:
+          - accepted_values:
+              values: ['Shipped', 'Complete', 'Processing', 'Cancelled', 'Returned']
+
+  - name: stg_order_items
+    description: One row per line item (revenue grain). All timestamps UTC.
+    columns:
+      - name: order_item_id
+        data_tests: [unique, not_null]
+      - name: order_id
+        data_tests: [not_null]
+      - name: sale_price
+        description: Actual transacted price. Must be non-negative.
+        data_tests:
+          - not_null
+    # non-negativity is asserted by the singular test tests/assert_sale_price_non_negative.sql
+    # (kept as a singular test to avoid a dbt_utils dependency / package fetch)
+
+  - name: stg_inventory_items
+    description: One row per stock unit. sold_at null = still in stock.
+    columns:
+      - name: inventory_item_id
+        data_tests: [unique, not_null]
+
+  - name: stg_events
+    description: One row per web event. user_id null = anonymous session.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: created_at
+        data_tests: [not_null]

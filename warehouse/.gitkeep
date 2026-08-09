@@ -1,0 +1,1 @@
+# DuckDB warehouse is a build artifact — rebuilt from raw CSVs via ingestion/load_sources.py

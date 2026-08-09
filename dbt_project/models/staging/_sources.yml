@@ -1,0 +1,96 @@
+version: 2
+
+sources:
+  - name: raw_thelook
+    description: >
+      Raw TheLook eCommerce tables, landed as-is by ingestion/load_sources.py.
+      Stands in for NorthPeak's production order/commerce system. No cleaning is
+      applied here — this is the immutable source boundary.
+    database: northpeak          # DuckDB db (logical)
+    schema: raw
+    # Audit column added by the loader on every table, used for freshness below.
+    loaded_at_field: _loaded_at
+
+    # --- SLA seed: freshness thresholds ---
+    # If the daily pipeline stops running, _loaded_at ages and these fire.
+    # Mirrors docs/SLA.md: warn if >26h stale, page if >48h stale.
+    freshness:
+      warn_after: {count: 26, period: hour}
+      error_after: {count: 48, period: hour}
+
+    tables:
+      - name: distribution_centers
+        description: The 10 fulfilment centers products ship from.
+        columns:
+          - name: id
+            description: Distribution center primary key.
+            data_tests: [unique, not_null]
+
+      - name: products
+        description: Product catalog (~29k SKUs).
+        columns:
+          - name: id
+            description: Product primary key.
+            data_tests: [unique, not_null]
+          - name: distribution_center_id
+            description: FK to distribution_centers.
+            data_tests:
+              - relationships:
+                  to: source('raw_thelook', 'distribution_centers')
+                  field: id
+
+      - name: users
+        description: Registered customers (100k).
+        columns:
+          - name: id
+            description: User primary key.
+            data_tests: [unique, not_null]
+
+      - name: orders
+        description: Order header grain — one row per order.
+        # Orders is the heartbeat table; freshness matters most here.
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 48, period: hour}
+        columns:
+          - name: order_id
+            description: Order primary key.
+            data_tests: [unique, not_null]
+          - name: user_id
+            description: FK to users.
+            data_tests:
+              - relationships:
+                  to: source('raw_thelook', 'users')
+                  field: id
+          - name: status
+            description: Order lifecycle status.
+            data_tests:
+              - accepted_values:
+                  values: ['Shipped', 'Complete', 'Processing', 'Cancelled', 'Returned']
+
+      - name: order_items
+        description: Line-item grain — one row per product per order. Has sale_price.
+        columns:
+          - name: id
+            description: Order-item primary key.
+            data_tests: [unique, not_null]
+          - name: order_id
+            description: FK to orders.
+            data_tests:
+              - relationships:
+                  to: source('raw_thelook', 'orders')
+                  field: order_id
+
+      - name: inventory_items
+        description: Individual stock units; links products to sales.
+        columns:
+          - name: id
+            description: Inventory-item primary key.
+            data_tests: [unique, not_null]
+
+      - name: events
+        description: Web clickstream (~2.4M rows). Basis for conversion/traffic KPIs.
+        columns:
+          - name: id
+            description: Event primary key.
+            data_tests: [unique, not_null]

@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: fct_revenue_recognition
+    description: >
+      Finance accrual view (one row per UTC order_date). Recognizes only fulfilled
+      sales; exposes Processing as a reconciling item back to management net revenue.
+    columns:
+      - name: order_date
+        data_tests: [unique, not_null]
+      - name: recognized_revenue
+        data_tests: [not_null]

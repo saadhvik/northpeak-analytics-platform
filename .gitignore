@@ -1,0 +1,35 @@
+# --- Build artifacts (never commit; rebuildable from raw) ---
+warehouse/*.duckdb
+warehouse/*.duckdb.wal
+warehouse/metabase_compat/
+dashboards/metabase_export/.duckdb_cli_cache/
+dashboards/metabase_export/plugins/
+
+# --- Raw source data (large; lives outside the repo / is downloaded) ---
+raw_data/
+*.csv
+!dbt_project/seeds/*.csv        # dbt seeds ARE version-controlled
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+.venv_mb/
+venv/
+
+# --- dbt ---
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/
+
+# --- local / ephemeral (never publish) ---
+# (note: .gitignore has no inline comments — keep patterns on their own lines)
+.claude/
+dbt_project/.user.yml
+.tmp_dagster_home_*/
+DAGSTER_HOME/

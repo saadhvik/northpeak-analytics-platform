@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: One row per customer with lifetime order behavior and segment.
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+      - name: customer_segment
+        data_tests:
+          - accepted_values:
+              values: ['never_purchased', 'one_time', 'repeat']
+
+  - name: dim_products
+    description: One row per product with catalog attributes and lifetime sales.
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+
+  - name: fct_orders
+    description: One row per order (order grain). Source of truth for order counts.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: user_id
+      - name: status
+        data_tests:
+          - accepted_values:
+              values: ['Shipped', 'Complete', 'Processing', 'Cancelled', 'Returned']

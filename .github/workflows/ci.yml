@@ -1,0 +1,59 @@
+name: CI
+
+# The data contract, enforced on every change. Nothing merges that breaks a model,
+# a test, or a quality invariant. The pipeline is re-derivable from raw data, so CI
+# rebuilds it from scratch on a small synthetic dataset (no 3.4M-row Kaggle download,
+# no committed data) and runs the exact same dbt tests + quality suite as production.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so a rapid push sequence doesn't queue up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-quality:
+    name: build · test · quality
+    runs-on: ubuntu-latest
+    env:
+      # dbt resolves the DuckDB path from this; the file MUST be named
+      # northpeak.duckdb so its catalog matches `database: northpeak` in
+      # models/staging/_sources.yml.
+      NORTHPEAK_DUCKDB: ${{ github.workspace }}/warehouse/northpeak.duckdb
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Generate synthetic source data
+        # Deterministic (fixed seed) so runs are reproducible.
+        run: python ingestion/generate_synthetic.py --out-dir ./raw_data
+
+      - name: Load raw layer into DuckDB
+        run: python ingestion/load_sources.py --source-dir ./raw_data --db "$NORTHPEAK_DUCKDB" --strict
+
+      - name: dbt build (models + 73 tests)
+        working-directory: dbt_project
+        run: dbt build --profiles-dir .
+
+      - name: Data quality suite (Great Expectations + relational invariants)
+        run: python quality/run_quality_checks.py --db "$NORTHPEAK_DUCKDB"
+
+      - name: dbt source freshness (non-blocking)
+        # Freshness depends on wall-clock vs _loaded_at; informational in CI since the
+        # loader just wrote the data. Never fails the build.
+        working-directory: dbt_project
+        run: dbt source freshness --profiles-dir . || true

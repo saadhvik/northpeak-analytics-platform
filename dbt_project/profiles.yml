@@ -1,0 +1,13 @@
+# dbt connection profile for the NorthPeak DuckDB warehouse.
+# Path is env-overridable so CI / a sandbox can point elsewhere without editing
+# this file. Default assumes the repo layout: dbt runs from dbt_project/, and the
+# warehouse lives one level up in ../warehouse/.
+northpeak:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('NORTHPEAK_DUCKDB', '../warehouse/northpeak.duckdb') }}"
+      threads: 4
+      # keep the raw layer read-only-ish: dbt only creates staging/marts schemas
+      extensions: []

@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: fct_daily_kpis
+    description: >
+      Daily KPI mart (one row per UTC order_date). Revenue ladder, orders, active
+      customers, AOV, refund rate. Every column maps to docs/metric_definitions.md.
+    columns:
+      - name: order_date
+        data_tests: [unique, not_null]
+      - name: net_revenue
+        data_tests: [not_null]
+      - name: net_orders
+        data_tests: [not_null]
