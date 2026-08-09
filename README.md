@@ -1,5 +1,7 @@
 # NorthPeak Analytics
 
+**🔗 [Live demo — open the dashboard](https://saadhvik.github.io/northpeak-analytics-platform/)** · [Source on GitHub](https://github.com/saadhvik/northpeak-analytics-platform)
+
 **A complete, governed self-serve analytics platform** for NorthPeak, a ~$40M/yr online
 outdoor-gear retailer. One source of truth that marketing, ops, and finance query
 themselves — with the definition of every metric baked in, so the number you pull is the
